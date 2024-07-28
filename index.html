@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trigonometry Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Fahkwang:wght@400;700&family=Kanit:wght@400;700&family=Inconsolata:wght@400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            background-color: #003366; 
+            height: 100vh;
+            box-sizing: border-box;
+        }
+        h1 {
+            font-family: 'Kanit', sans-serif;
+            margin-bottom: 20px;
+            color: #fff;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 800px;
+            width: 100%;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background-color: #000000; 
+        }
+        input, button, select {
+            margin: 10px 0;
+            width: 100%;
+            max-width: 500px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 2px solid #fff; 
+            border-radius: 8px; 
+            background-color: #000; 
+            color: #fff; 
+        }
+        input#expression, select {
+            font-family: 'Fahkwang', sans-serif; 
+        }
+        button {
+            font-family: 'Kanit', sans-serif; 
+            background-color: #009999; 
+            color: #fff; 
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #007b7a; 
+        }
+        #output {
+            margin-top: 20px;
+            font-weight: bold;
+            font-size: 18px;
+            color: #fff;
+            text-align: center;
+            font-family: 'Inconsolata', monospace; 
+        }
+        .error {
+            color: red;
+        }
+        #canvas-container {
+            margin-top: 20px;
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+        }
+        canvas {
+            width: 100% !important;
+            height: auto;
+            background-color: #000; 
+        }
+        .button-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px; 
+        }
+        .developer-info {
+            background-color: #009999;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 5px 10px; 
+            font-size: 12px; 
+            cursor: pointer;
+            font-family: 'Kanit', sans-serif;
+        }
+        .developer-info:hover {
+            background-color: #007b7a;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 15px;
+                box-shadow: none;
+            }
+            input, button, select {
+                font-size: 16px;
+            }
+            .button-container {
+                flex-direction: column;
+                gap: 5px; 
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Trigonometry Calculator</h1>
+        <input type="text" id="expression" placeholder="Enter expression (e.g., sin(65)+cos(73))">
+        <select id="unit">
+            <option value="deg">Degrees</option>
+            <option value="rad">Radians</option>
+        </select>
+        <button onclick="calculate()">Compute</button>
+        <div id="output"></div>
+        <div id="canvas-container">
+            <canvas id="unitCircle"></canvas>
+        </div>
+        <div class="button-container">
+            <button onclick="downloadImage()">Save</button>
+            <button class="developer-info" onclick="window.open('https://github.com/KMORaza', '_blank')">Developer Info</button>
+        </div>
+    </div>
+
+    <script>
+        function drawUnitCircle(ctx, radius) {
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.beginPath();
+            ctx.arc(ctx.canvas.width / 2, ctx.canvas.height / 2, radius, 0, 2 * Math.PI);
+            ctx.strokeStyle = '#fff'; 
+            ctx.stroke();
+            ctx.closePath();
+            ctx.beginPath();
+            ctx.moveTo(ctx.canvas.width / 2 - radius, ctx.canvas.height / 2);
+            ctx.lineTo(ctx.canvas.width / 2 + radius, ctx.canvas.height / 2);
+            ctx.moveTo(ctx.canvas.width / 2, ctx.canvas.height / 2 - radius);
+            ctx.lineTo(ctx.canvas.width / 2, ctx.canvas.height / 2 + radius);
+            ctx.strokeStyle = '#fff'; 
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        function drawPoint(ctx, x, y, color, label) {
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.closePath();
+            ctx.font = '12px Arial';
+            ctx.fillStyle = color;
+            ctx.fillText(label, x + 10, y - 10);
+        }
+
+        function drawResult(ctx, result) {
+            ctx.font = '18px Inconsolata';
+            ctx.fillStyle = 'black';
+            const textWidth = ctx.measureText(result).width;
+            const x = (ctx.canvas.width - textWidth) / 2;
+            const y = ctx.canvas.height - 20;
+            ctx.fillText(result, x, y);
+        }
+
+        function calculate() {
+            const expression = document.getElementById('expression').value;
+            const unit = document.getElementById('unit').value;
+            const canvas = document.getElementById('unitCircle');
+            const ctx = canvas.getContext('2d');
+            const radius = Math.min(canvas.width, canvas.height) / 2 * 0.8;
+            drawUnitCircle(ctx, radius);
+            let result;
+            try {
+                const customFunctions = {
+                    sin: (x) => math.sin(convertToRadians(x)),
+                    cos: (x) => math.cos(convertToRadians(x)),
+                    tan: (x) => math.tan(convertToRadians(x)),
+                    sec: (x) => 1 / math.cos(convertToRadians(x)),
+                    csc: (x) => 1 / math.sin(convertToRadians(x)),
+                    cot: (x) => 1 / math.tan(convertToRadians(x)),
+                    sinh: (x) => math.sinh(convertToRadians(x)),
+                    cosh: (x) => math.cosh(convertToRadians(x)),
+                    tanh: (x) => math.tanh(convertToRadians(x)),
+                    sech: (x) => 1 / math.cosh(convertToRadians(x)),
+                    csch: (x) => 1 / math.sinh(convertToRadians(x)),
+                    coth: (x) => 1 / math.tanh(convertToRadians(x)) 
+                };
+
+                function convertToRadians(degrees) {
+                    return unit === 'deg' ? math.unit(degrees, 'deg').toNumber('rad') : degrees;
+                }
+
+                let parsedExpression = expression
+                    .replace(/sin\(/g, 'customFunctions.sin(')
+                    .replace(/cos\(/g, 'customFunctions.cos(')
+                    .replace(/tan\(/g, 'customFunctions.tan(')
+                    .replace(/sec\(/g, 'customFunctions.sec(')
+                    .replace(/csc\(/g, 'customFunctions.csc(')
+                    .replace(/cot\(/g, 'customFunctions.cot(')
+                    .replace(/sinh\(/g, 'customFunctions.sinh(')
+                    .replace(/cosh\(/g, 'customFunctions.cosh(')
+                    .replace(/tanh\(/g, 'customFunctions.tanh(')
+                    .replace(/sech\(/g, 'customFunctions.sech(')
+                    .replace(/csch\(/g, 'customFunctions.csch(')
+                    .replace(/coth\(/g, 'customFunctions.coth(');
+
+                result = math.evaluate(parsedExpression, { customFunctions });
+
+                if (isNaN(result) || !isFinite(result)) {
+                    throw new Error('Invalid result');
+                }
+
+                const regex = /([a-z]+)\((\d+)\)/g;
+                let match;
+                const points = [];
+                while ((match = regex.exec(expression)) !== null) {
+                    const func = match[1];
+                    const angle = parseFloat(match[2]);
+
+                    if (['sin', 'cos', 'sinh', 'cosh'].includes(func)) {
+                        const value = math.evaluate(`${func}(${convertToRadians(angle)})`, { customFunctions });
+                        const x = canvas.width / 2 + radius * (['cos', 'cosh'].includes(func) ? value : 0);
+                        const y = canvas.height / 2 - radius * (['sin', 'sinh'].includes(func) ? value : 0);
+                        points.push({ x, y, label: `${func}(${angle})` });
+                    }
+                }
+                points.forEach(point => drawPoint(ctx, point.x, point.y, 'red', point.label));
+                const formattedResult = `${expression} = ${result}`;
+                drawResult(ctx, formattedResult);
+                document.getElementById('output').innerText = formattedResult;
+                document.getElementById('output').classList.remove('error');
+            } catch (error) {
+                const errorMsg = 'Error: ' + error.message;
+                document.getElementById('output').innerText = errorMsg;
+                document.getElementById('output').classList.add('error');
+            }
+        }
+
+        function downloadImage() {
+            const canvas = document.getElementById('unitCircle');
+            const dataURL = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.href = dataURL;
+            link.download = 'unit_circle.png';
+            link.click();
+        }
+
+        window.addEventListener('load', () => {
+            const canvas = document.getElementById('unitCircle');
+            canvas.width = 600;
+            canvas.height = 600;
+        });
+    </script>
+</body>
+</html>
